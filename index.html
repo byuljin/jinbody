@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나의 몸 기록</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#F4F3EE; --ink:#2B3440; --ink-soft:#6B7583; --line:#DDD9CF;
+    --plum:#8D5A97; --plum-soft:#EFE4F1;
+    --teal:#3E7C74; --coral:#C96F5D; --rose:#F3DEDC; --card:#FCFBF8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'IBM Plex Sans KR',sans-serif; font-weight:500;
+    background:var(--paper); color:var(--ink);
+    max-width:520px; margin:0 auto; padding:24px 20px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:600}
+
+  /* status */
+  .status{
+    display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-soft);
+    margin-bottom:16px;padding:7px 11px;background:var(--card);
+    border:1px solid var(--line);border-radius:99px;width:fit-content;
+  }
+  .status .led{width:7px;height:7px;border-radius:50%;background:#C9A227;flex-shrink:0}
+  .status.live .led{background:#3E7C74}
+  .status.snap .led{background:#C96F5D}
+
+  header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px}
+  header h1{font-family:'Gowun Batang',serif;font-size:21px;font-weight:700;letter-spacing:-0.01em}
+  .total-day{font-size:14px;color:var(--ink-soft)}
+  .total-day b{font-family:'IBM Plex Mono',monospace;font-size:24px;color:var(--ink);font-weight:700}
+
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 22px 20px;margin-bottom:14px}
+  .hero .eyebrow{font-size:12px;letter-spacing:0.08em;color:var(--plum);font-weight:600;margin-bottom:6px}
+  .hero .dday{font-family:'IBM Plex Mono',monospace;font-size:56px;font-weight:700;line-height:1;letter-spacing:-0.03em}
+  .hero .last-info{margin-top:8px;font-size:13.5px;color:var(--ink-soft)}
+  .hero .last-info b{color:var(--ink);font-weight:600}
+  .pace{margin-top:10px;font-size:12.5px;color:var(--ink-soft);line-height:1.5}
+  .pace b{color:var(--plum);font-weight:600}
+
+  .dose-track{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+  .dose-track .label{font-size:12px;color:var(--ink-soft);margin-bottom:11px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .dots{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .dot{
+    width:44px;height:44px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:-0.03em;
+  }
+  .dot.d25{background:var(--plum-soft);color:var(--plum)}
+  .dot.d50{background:var(--plum);color:#fff}
+  .dot.latest{outline:2px solid var(--plum);outline-offset:2.5px}
+  .dose-legend{margin-top:12px;font-size:12px;color:var(--ink-soft);display:flex;gap:14px}
+  .dose-legend span{display:flex;align-items:center;gap:5px}
+  .dose-legend i{display:inline-block;border-radius:50%;width:12px;height:12px}
+  .dose-legend .s{background:var(--plum-soft);border:1px solid var(--plum)}
+  .dose-legend .l{background:var(--plum)}
+
+  .section-title{font-family:'Gowun Batang',serif;font-size:15px;font-weight:700;margin:26px 2px 12px;display:flex;align-items:baseline;gap:8px}
+  .section-title span{font-size:12px;font-weight:400;color:var(--ink-soft);font-family:'IBM Plex Sans KR'}
+
+  .delta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .delta{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .delta .k{font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;font-weight:500}
+  .delta .v{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;letter-spacing:-0.02em}
+  .delta .v em{font-style:normal;font-size:13px;color:var(--ink-soft);font-weight:500;margin-left:3px}
+  .delta .now{font-size:12px;color:var(--ink-soft);margin-top:3px;font-family:'IBM Plex Mono',monospace}
+  .down{color:var(--teal)} .muscle-flag{color:var(--coral)}
+
+  .cycle-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+  .cycle-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+  .cycle-card .ck{font-size:12px;color:var(--ink-soft);margin-bottom:5px}
+  .cycle-card .cv{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:700;letter-spacing:-0.02em;line-height:1}
+  .cycle-trend{text-align:right;font-size:12px;font-weight:600;padding-top:2px}
+  .cycle-trend .tlabel{color:var(--ink-soft);font-weight:500;font-size:11px;margin-bottom:3px}
+  .cycle-trend.down{color:var(--coral)} .cycle-trend.up{color:var(--teal)} .cycle-trend.flat{color:var(--ink-soft)}
+  .cycle-flow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:2px 0}
+  .cycle-step{flex-shrink:0;text-align:center;position:relative;min-width:52px}
+  .cycle-step .sd{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-bottom:5px}
+  .cycle-step .sg{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:var(--plum);
+    background:var(--plum-soft);border-radius:9px;padding:5px 0;margin:0 3px}
+  .cycle-step .sg.latest{background:var(--plum);color:#fff}
+  .cycle-step .sg.pending{background:transparent;border:1px dashed var(--line);color:var(--ink-soft)}
+  .cycle-step .sp{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#B58A80;margin-top:4px}
+  .cycle-arrow{flex-shrink:0;display:flex;align-items:center;color:var(--line);font-size:12px;padding-bottom:2px}
+  .cycle-note{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.55}
+  .cycle-note b{color:var(--coral);font-weight:600}
+
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 14px 10px}
+  .range-row{display:flex;gap:6px;padding:0 4px;margin-bottom:12px}
+  .range-row button{
+    flex:1;font-family:'IBM Plex Sans KR';font-weight:600;font-size:12.5px;padding:8px 0;border-radius:10px;
+    border:1px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer;
+  }
+  .range-row button.on{background:var(--plum);color:#fff;border-color:var(--plum)}
+  .range-delta{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 6px;margin-bottom:12px;
+    background:var(--paper);border-radius:12px;
+  }
+  .range-delta div{text-align:center}
+  .range-delta .rk{font-size:10.5px;color:var(--ink-soft);margin-bottom:3px}
+  .range-delta .rv{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;letter-spacing:-0.02em}
+  .range-delta .rv.up{color:var(--coral)} .range-delta .rv.dn{color:var(--teal)} .range-delta .rv.flat{color:var(--ink-soft)}
+  .chart-tabs{display:flex;gap:6px;margin-bottom:14px;padding:0 4px;flex-wrap:wrap}
+  .chart-tabs button{
+    font-family:'IBM Plex Sans KR';font-weight:500;font-size:12.5px;padding:6px 12px;border-radius:99px;
+    border:1px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer;
+  }
+  .chart-tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .chart-wrap{position:relative;height:230px}
+  .chart-note{font-size:11.5px;color:var(--ink-soft);padding:10px 6px 6px;display:flex;gap:12px;flex-wrap:wrap}
+  .chart-note span{display:flex;align-items:center;gap:5px}
+  .chart-note i.inj{width:2px;height:11px;background:var(--plum);display:inline-block}
+  .chart-note i.per{width:11px;height:11px;background:var(--rose);display:inline-block;border-radius:3px}
+  .chart-note i.ma{width:14px;height:0;border-top:2px dashed var(--ink-soft);display:inline-block}
+
+  .badges{display:flex;flex-direction:column;gap:8px}
+  .badge{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px}
+  .badge.locked{opacity:.45}
+  .badge .medal{width:34px;height:34px;border-radius:50%;flex-shrink:0;background:var(--plum-soft);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .badge.locked .medal{background:#E8E6DF}
+  .badge .t{font-size:13.5px;font-weight:500}
+  .badge .d{font-size:11.5px;color:var(--ink-soft);margin-top:1px;font-family:'IBM Plex Mono',monospace}
+
+
+  .loading{text-align:center;padding:60px 0;color:var(--ink-soft);font-size:13px}
+  footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--ink-soft);line-height:1.7}
+  #app{display:none}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">데이터를 불러오는 중…</div>
+
+<div id="app">
+  <div class="status" id="status"><span class="led"></span><span id="statusText">확인 중</span></div>
+
+  <header>
+    <h1>나의 몸 기록</h1>
+    <div class="total-day">마운자로 <b id="totalDay">–</b>일차</div>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow">마지막 투여로부터</div>
+    <div class="dday num" id="dday">–</div>
+    <div class="last-info" id="lastInfo"></div>
+    <div class="pace" id="pace"></div>
+    <div class="dose-track">
+      <div class="label"><span>투여 이력</span><span class="num" id="doseSummary"></span></div>
+      <div class="dots" id="doseDots"></div>
+      <div class="dose-legend">
+        <span><i class="s"></i>2.5mg</span>
+        <span><i class="l"></i>5mg</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">시작 대비 변화 <span id="rangeLabel"></span></div>
+  <div class="delta-grid" id="deltaGrid"></div>
+
+  <div class="section-title">추이</div>
+  <div class="chart-card">
+    <div class="range-row" id="rangeBtns"></div>
+    <div class="range-delta" id="rangeDelta"></div>
+    <div class="chart-tabs" id="chartTabs"></div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <div class="chart-note">
+      <span><i class="inj"></i>투여일</span>
+      <span><i class="per"></i>생리 기간</span>
+      <span><i class="ma"></i>7일 평균</span>
+    </div>
+  </div>
+
+
+  <div class="section-title">생리 주기 <span>주기 변화 추적</span></div>
+  <div class="cycle-card">
+    <div class="cycle-top">
+      <div>
+        <div class="ck">마지막 시작으로부터</div>
+        <div class="cv num" id="cycleDday">–</div>
+      </div>
+      <div class="cycle-trend" id="cycleTrend"></div>
+    </div>
+    <div class="cycle-flow" id="cycleFlow"></div>
+    <div class="cycle-note" id="cycleNote"></div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+/* ================= 설정 ================= */
+const API = 'https://script.google.com/macros/s/AKfycbznvLTNZtO8u5xKyXKUMhbkmUJdhBHm09fYXCvtSEqCpRjSbpAtSeK7yyzwV2Mf5tJAPQ/exec';
+const HEIGHT_M = 1.555;              // 인바디 기기 설정값 155.5cm
+const H2 = HEIGHT_M * HEIGHT_M;
+
+/* 라이브 연결 실패 시 사용할 스냅샷 (2026-07-07 기준) */
+const SNAPSHOT = [["2026-03-08",63.5,20.6,25.5,2.5,0],["2026-03-09",63,20.9,24.7,0,0],["2026-03-10",62.2,20.6,24.4,0,0],["2026-03-11",62.3,20.5,24.8,0,0],["2026-03-12",61.6,20.5,24.1,0,0],["2026-03-13",61.4,20.3,24.3,0,0],["2026-03-14",61.4,20.4,24.1,0,0],["2026-03-15",61.1,19.9,24.5,0,0],["2026-03-16",60.6,19.4,24.8,0,0],["2026-03-17",60.6,19.2,25.1,2.5,0],["2026-03-18",60.3,20,23.8,0,0],["2026-03-19",59.9,19.5,24.2,0,0],["2026-03-20",59.3,19.4,23.8,0,0],["2026-03-21",58.6,19.2,23.3,0,1],["2026-03-22",58.7,19.1,23.5,0,1],["2026-03-23",58.7,19.3,23.2,0,1],["2026-03-24",58.5,18.9,23.3,0,1],["2026-03-25",59.4,19.9,22.8,0,1],["2026-03-26",59.6,20,22.9,2.5,0],["2026-03-27",59.5,20.1,22.6,0,0],["2026-03-28",59.2,20.2,22.1,0,0],["2026-03-29",59.1,19.7,22.8,0,0],["2026-03-30",59.2,19.9,22.6,0,0],["2026-03-31",59.1,20,22.3,0,0],["2026-04-01",58.8,19.9,22,0,0],["2026-04-02",58.5,19.6,22.3,0,0],["2026-04-03",58.5,19.9,21.9,0,0],["2026-04-04",58.7,20.1,21.5,0,0],["2026-04-05",58.8,19.9,22,2.5,0],["2026-04-06",58.7,19.9,22,0,0],["2026-04-07",58.6,19.9,21.9,0,0],["2026-04-08",58.1,20,21.4,0,0],["2026-04-09",58.2,19.6,22,0,0],["2026-04-10",58,19.5,21.9,0,0],["2026-04-11",57.9,19.6,21.7,0,0],["2026-04-12",57.9,19.6,21.8,0,0],["2026-04-13",57.8,19.5,21.7,0,0],["2026-04-14",57.6,19.3,21.9,2.5,0],["2026-04-15",57.9,19.6,21.7,0,0],["2026-04-16",57.7,19.7,21.4,0,0],["2026-04-17",57.3,19.5,21.3,0,1],["2026-04-18",57.5,19.8,20.9,0,1],["2026-04-19",57.5,19.8,20.8,0,1],["2026-04-20",57.5,19.8,20.9,0,1],["2026-04-21",57.7,20,20.8,0,1],["2026-04-22",57.2,19.8,20.8,0,0],["2026-04-23",57.3,19.7,20.9,0,0],["2026-04-24",57.2,19.8,20.6,0,0],["2026-04-25",56.9,19.7,20.6,2.5,0],["2026-04-26",56.9,19.5,20.8,0,0],["2026-04-27",56.6,19.3,20.8,0,0],["2026-04-28",56.4,19,21.2,0,0],["2026-04-29",56.3,19.2,20.7,0,0],["2026-04-30",56.1,19.1,20.8,0,0],["2026-05-01",56.6,19.5,20.5,0,0],["2026-05-02",55.9,19.3,20.2,0,0],["2026-05-03",55.9,19.5,20,0,0],["2026-05-04",56.4,19.6,20.3,0,0],["2026-05-05",56.5,19.5,20.4,0,0],["2026-05-06",56.9,20.1,19.7,0,0],["2026-05-07",57.1,20.2,19.8,2.5,0],["2026-05-08",56.6,20.1,19.5,0,0],["2026-05-09",56.4,19.9,19.6,0,0],["2026-05-10",55.7,19.5,19.8,0,0],["2026-05-11",55.6,19.3,20,0,0],["2026-05-12",55.3,19.1,20.1,0,0],["2026-05-13",55.5,19.4,19.7,0,1],["2026-05-14",55.6,19.3,19.8,0,1],["2026-05-15",55.4,19.5,19.3,0,1],["2026-05-16",55.4,19.5,19.3,2.5,1],["2026-05-17",55.3,19.5,19.2,0,1],["2026-05-18",55.6,20,18.6,0,0],["2026-05-19",54.9,19.3,19.1,0,0],["2026-05-20",55.1,19.4,19.2,0,0],["2026-05-21",55,19.7,18.6,0,0],["2026-05-22",54.9,19.4,18.9,0,0],["2026-05-23",54.8,19.2,19.1,0,0],["2026-05-24",54.8,19.3,19,0,0],["2026-05-25",54.7,19,19.4,2.5,0],["2026-05-26",54.9,19.5,18.8,0,0],["2026-05-27",55.1,19.6,18.7,0,0],["2026-05-28",55,19.8,18.3,0,0],["2026-05-29",54.6,19.5,18.6,0,0],["2026-05-30",54.6,18.9,19.5,0,0],["2026-05-31",54.6,19,19.5,0,0],["2026-06-01",54.5,19.1,19.2,5,0],["2026-06-02",54.5,19,19.4,0,0],["2026-06-03",54.2,19,19,0,0],["2026-06-04",54,18.8,19.1,0,0],["2026-06-05",53.9,19,18.6,0,0],["2026-06-06",53.9,19,18.5,0,0],["2026-06-07",53.7,19,18.4,0,1],["2026-06-08",53.9,19.2,18.2,0,1],["2026-06-09",53.5,19.1,18,0,1],["2026-06-11",54.1,19.2,18.4,0,1],["2026-06-12",54.1,19.3,18.3,0,0],["2026-06-13",54.2,19.5,18,0,0],["2026-06-14",54,19.3,18.1,0,0],["2026-06-15",54.4,19.5,18.2,0,0],["2026-06-16",54.8,19.9,17.9,0,0],["2026-06-17",54.6,19.6,18.2,0,0],["2026-06-18",54.9,20.3,17.3,5,0],["2026-06-19",54.3,19.9,17.5,0,0],["2026-06-20",53.7,20.4,16.2,0,0],["2026-06-21",53.5,19.1,18.1,0,0],["2026-06-22",53.6,18.5,19.3,0,0],["2026-06-23",53.9,19.2,18.2,0,0],["2026-06-24",53.7,19.2,18.2,0,0],["2026-06-25",54.1,19.9,17.2,0,0],["2026-06-26",53.9,19.8,17.4,0,0],["2026-06-27",53.8,19.4,18,0,0],["2026-06-28",54,19.4,18.1,5,0],["2026-06-29",54,19.5,17.9,0,0],["2026-06-30",53.5,19.3,17.7,0,1],["2026-07-01",53.6,19.4,17.7,0,1],["2026-07-02",53.5,19.6,17.2,0,1],["2026-07-03",53.2,20,16.1,0,1],["2026-07-06",52.9,19.6,16.7,0,1],["2026-07-07",52.8,19.7,16.4,0,1],["2026-07-08",52.7,19.5,16.6,0,0],["2026-07-09",53.1,19.6,16.7,0,0]]
+  .map(r=>({date:r[0],weight:r[1],muscle:r[2],fat:r[3],dose:r[4]||null,period:!!r[5]}));
+
+/* ================= 유틸 ================= */
+const pad=n=>String(n).padStart(2,'0');
+const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const daysBetween=(a,b)=>Math.round((parse(b)-parse(a))/86400000);
+const md=s=>{const[,m,d]=s.split('-');return `${+m}/${+d}`};
+const fatPct=r=>(r.weight&&r.fat)?+(r.fat/r.weight*100).toFixed(2):null;
+const bmi=r=>r.weight?+(r.weight/H2).toFixed(2):null;
+const sign=v=>(v>0?'+':'−')+Math.abs(v).toFixed(1);
+
+/* ================= 데이터 로드 ================= */
+async function load(){
+  try{
+    const res=await fetch(API,{redirect:'follow'});
+    const j=await res.json();
+    if(j&&j.ok&&Array.isArray(j.data)&&j.data.length) return {rows:j.data,live:true};
+    throw new Error('bad payload');
+  }catch(err){
+    return {rows:SNAPSHOT,live:false,err:String(err)};
+  }
+}
+
+/* ================= 렌더 ================= */
+let DATA=[],LIVE=false,chart=null,currentMetric='weight',currentRange='all',METRICS={},injIdx=[],periodRuns=[];
+
+function render({rows,live,err}){
+  DATA=rows.filter(r=>r.weight); LIVE=live;
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='block';
+
+  const st=document.getElementById('status');
+  st.classList.add(live?'live':'snap');
+  document.getElementById('statusText').textContent = live
+    ? '시트에서 실시간으로 불러옴'
+    : '스냅샷 표시 중 · 시트 연결 실패 (CORS)';
+
+  const first=DATA[0], last=DATA[DATA.length-1];
+  const today=todayISO();
+
+  /* --- 일차 (첫날 = 1일차) --- */
+  document.getElementById('totalDay').textContent = daysBetween(first.date,today)+1;
+
+  /* --- 투여 --- */
+  const injections=DATA.filter(r=>r.dose);
+  const lastInj=injections[injections.length-1];
+  const n25=injections.filter(r=>r.dose===2.5).length;
+  const n50=injections.filter(r=>r.dose===5).length;
+
+  document.getElementById('dday').textContent='D+'+daysBetween(lastInj.date,today);
+  const wd=['일','월','화','수','목','금','토'][parse(lastInj.date).getDay()];
+  document.getElementById('lastInfo').innerHTML=
+    `<b>${md(lastInj.date)} (${wd}) · ${lastInj.dose}mg</b> · ${injections.length}회차`;
+
+  /* 평균 간격 (불규칙 투여이므로 의미 있음) */
+  const gaps=[];
+  for(let i=1;i<injections.length;i++) gaps.push(daysBetween(injections[i-1].date,injections[i].date));
+  const avg=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+  const since=daysBetween(lastInj.date,today);
+  const diff=since-avg;
+  document.getElementById('pace').innerHTML=
+    `평균 투여 간격 <b>${avg.toFixed(1)}일</b> · 지금은 평균보다 `+
+    (Math.abs(diff)<0.5?'<b>비슷한 시점</b>':`<b>${Math.abs(diff).toFixed(1)}일 ${diff>0?'늦음':'이름'}</b>`);
+
+  document.getElementById('doseSummary').textContent=
+    `총 ${injections.length}회 — 2.5mg ×${n25} · 5mg ×${n50}`;
+
+  const dots=document.getElementById('doseDots');
+  injections.forEach((r,i)=>{
+    const el=document.createElement('div');
+    el.className='dot '+(r.dose===5?'d50':'d25')+(i===injections.length-1?' latest':'');
+    el.textContent=md(r.date);
+    el.title=`${i+1}회차 · ${r.dose}mg`;
+    dots.appendChild(el);
+  });
+
+  /* --- 변화 카드 --- */
+  document.getElementById('rangeLabel').textContent=`${md(first.date)} → ${md(last.date)} 기준`;
+  const cards=[
+    {k:'체중',    v:last.weight-first.weight, u:'kg',  a:first.weight, b:last.weight, cls:'down'},
+    {k:'체지방률', v:fatPct(last)-fatPct(first), u:'%p', a:fatPct(first), b:fatPct(last), cls:'down'},
+    {k:'체지방량', v:last.fat-first.fat, u:'kg', a:first.fat, b:last.fat, cls:'down'},
+    {k:'골격근량', v:last.muscle-first.muscle, u:'kg', a:first.muscle, b:last.muscle, cls:'muscle-flag'},
+    {k:'BMI',     v:bmi(last)-bmi(first), u:'', a:bmi(first), b:bmi(last), cls:'down'}
+  ];
+  const zone=bmi(last)<18.5?'저체중':bmi(last)<23?'정상 체중':bmi(last)<25?'과체중':'비만';
+  const grid=document.getElementById('deltaGrid');
+  cards.forEach(c=>{
+    grid.insertAdjacentHTML('beforeend',
+      `<div class="delta"><div class="k">${c.k}</div>
+       <div class="v ${c.cls} num">${sign(c.v)}${c.u?`<em>${c.u}</em>`:''}</div>
+       <div class="now num">${(+c.a).toFixed(1)} → ${(+c.b).toFixed(1)}</div></div>`);
+  });
+  grid.insertAdjacentHTML('beforeend',
+    `<div class="delta"><div class="k">현재 구간</div>
+     <div class="v num" style="font-size:17px;padding-top:4px">${zone}</div>
+     <div class="now num">BMI 18.5–23</div></div>`);
+
+  /* --- 차트 --- */
+  METRICS={
+    weight:{label:'체중 (kg)',   data:DATA.map(r=>r.weight), color:'#2B3440'},
+    fatp:  {label:'체지방률 (%)', data:DATA.map(fatPct),      color:'#C96F5D'},
+    muscle:{label:'골격근량 (kg)',data:DATA.map(r=>r.muscle), color:'#3E7C74'},
+    fat:   {label:'체지방량 (kg)',data:DATA.map(r=>r.fat),    color:'#C96F5D'},
+    bmi:   {label:'BMI',         data:DATA.map(bmi),         color:'#8D5A97',
+            zones:[{v:25,t:'비만 경계'},{v:23,t:'정상 상한'}]}
+  };
+  injIdx=DATA.map((r,i)=>r.dose?i:-1).filter(i=>i>=0);
+
+  /* 생리: 연속 구간별로 묶기 */
+  periodRuns=[]; let run=null;
+  DATA.forEach((r,i)=>{
+    if(r.period){ if(!run) run={s:i,e:i}; else run.e=i; }
+    else if(run){ periodRuns.push(run); run=null; }
+  });
+  if(run) periodRuns.push(run);
+
+  /* 생리 주기: 시작일 추출 (10일 이내 재등장은 같은 주기로 병합) */
+  renderCycle(today);
+
+  const tabs=document.getElementById('chartTabs');
+  [['weight','체중'],['fatp','체지방률'],['muscle','골격근량'],['fat','체지방량'],['bmi','BMI']]
+    .forEach(([k,label],i)=>{
+      const b=document.createElement('button');
+      b.textContent=label; b.dataset.m=k;
+      if(i===0) b.classList.add('on');
+      b.onclick=()=>{tabs.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');draw(k)};
+      tabs.appendChild(b);
+    });
+
+  const rb=document.getElementById('rangeBtns');
+  [['all','전체'],['3m','3개월'],['1m','1개월']].forEach(([k,label],i)=>{
+    const b=document.createElement('button');
+    b.textContent=label; b.dataset.r=k;
+    if(k===currentRange) b.classList.add('on');
+    b.onclick=()=>{
+      rb.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); currentRange=k; draw(currentMetric);
+    };
+    rb.appendChild(b);
+  });
+
+  draw('weight');
+
+
+  document.getElementById('footer').innerHTML = LIVE
+    ? '구글 시트와 연결됨 · 새로고침하면 최신 데이터를 불러옵니다'
+    : `시트 연결이 브라우저에서 차단되었습니다.<br>Apps Script 배포를 "모든 사용자"로 바꾸면 해결돼요.<br><span style="opacity:.6">${esc(err||'')}</span>`;
+}
+
+function esc(s){return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
+
+/* --- 생리 주기 (평균 없이 변화 흐름 중심) --- */
+function renderCycle(today){
+  const daysList=DATA.filter(r=>r.period).map(r=>r.date);
+  if(!daysList.length){ document.getElementById('cycleDday').textContent='기록 없음'; return; }
+
+  // 시작일: 직전 생리일과 10일 이상 떨어지면 새 주기
+  const starts=[];
+  let prev=null;
+  daysList.forEach(d=>{
+    if(prev===null || daysBetween(prev,d)>10) starts.push(d);
+    prev=d;
+  });
+
+  const last=starts[starts.length-1];
+  const since=daysBetween(last,today);
+  document.getElementById('cycleDday').innerHTML=`D+${since}`;
+
+  // 시작일 사이의 간격은 "도착한 시작일"에 붙여 표시
+  // 예: 6/30 → 7/20이 20일이면 7/20 아래에 20일을 표시한다.
+  const cycles=[];
+  for(let i=1;i<starts.length;i++){
+    cycles.push({from:starts[i-1],to:starts[i],gap:daysBetween(starts[i-1],starts[i])});
+  }
+
+  // 각 시작일의 생리 기록 기간과 종료 확인 여부
+  function periodInfo(startDate){
+    const idx=DATA.findIndex(r=>r.date===startDate);
+    if(idx<0) return {span:null,ended:false};
+
+    let end=startDate;
+    let ended=false;
+    for(let j=idx;j<DATA.length;j++){
+      if(DATA[j].period){
+        end=DATA[j].date;
+      }else if(parse(DATA[j].date)>parse(end)){
+        // 생리 표시 이후 날짜에 '아님' 기록이 있으면 종료가 확인된 것으로 본다.
+        ended=true;
+        break;
+      }
+    }
+    return {span:daysBetween(startDate,end)+1,ended};
+  }
+
+  // 흐름 렌더 (최근 6개 간격)
+  const flow=document.getElementById('cycleFlow');
+  const show=cycles.slice(-6);
+  let html='';
+
+  if(show.length){
+    show.forEach((c,i)=>{
+      const isLast=i===show.length-1;
+      const info=periodInfo(c.to);
+      const duration=info.span
+        ? (info.ended ? `${info.span}일간` : `${info.span}일 기록`)
+        : '';
+
+      html+=`<div class="cycle-step">
+        <div class="sd">${md(c.to)}</div>
+        <div class="sg${isLast?' latest':''}">${c.gap}일</div>
+        <div class="sp">${duration}</div>
+      </div>`;
+      if(!isLast) html+=`<div class="cycle-arrow">›</div>`;
+    });
+  }else{
+    const info=periodInfo(last);
+    html=`<div class="cycle-step">
+      <div class="sd">${md(last)}</div>
+      <div class="sg pending">첫 기록</div>
+      <div class="sp">${info.span ? (info.ended ? info.span+'일간' : info.span+'일 기록') : ''}</div>
+    </div>`;
+  }
+
+  flow.innerHTML=html;
+
+  // 추세 표시 (최근 3개 주기 방향)
+  const trendEl=document.getElementById('cycleTrend');
+  if(cycles.length>=2){
+    const recent=cycles.slice(-3).map(c=>c.gap);
+    const first=recent[0], lastGap=recent[recent.length-1];
+    const diff=lastGap-first;
+    let cls,arrow,word;
+    if(diff<=-2){cls='down';arrow='↓';word='짧아지는 중';}
+    else if(diff>=2){cls='up';arrow='↑';word='길어지는 중';}
+    else{cls='flat';arrow='→';word='비슷하게 유지';}
+    trendEl.className='cycle-trend '+cls;
+    trendEl.innerHTML=`<div class="tlabel">최근 추세</div>${arrow} ${word}`;
+
+    // 코멘트
+    const gaps=cycles.map(c=>c.gap);
+    const noteEl=document.getElementById('cycleNote');
+    if(cls==='down'){
+      noteEl.innerHTML=`주기가 <b>${gaps[0]}일 → ${lastGap}일</b>로 점점 짧아지고 있어요.<br>`+
+        `체지방이 빠르게 줄면서 나타날 수 있는 변화예요. 진료 때 참고가 될 수 있어요.`;
+    }else if(cls==='up'){
+      noteEl.innerHTML=`주기가 <b>${gaps[0]}일 → ${lastGap}일</b>로 길어지는 흐름이에요.`;
+    }else{
+      noteEl.innerHTML=`최근 주기가 <b>${Math.min(...recent)}~${Math.max(...recent)}일</b>로 안정적인 편이에요.`;
+    }
+  }else{
+    trendEl.innerHTML='';
+    document.getElementById('cycleNote').innerHTML=
+      `마지막 시작 <b>${md(last)}</b> · 주기 비교는 2회차부터 보여요.`;
+  }
+}
+
+/* --- 차트 그리기 --- */
+let viewInj=[],viewPeriod=[];
+const markerPlugin={
+  id:'markers',
+  beforeDatasetsDraw(c){
+    const {ctx,chartArea:{top,bottom,left,right},scales:{x,y}}=c;
+    ctx.save(); ctx.fillStyle='#F3DEDC';
+    viewPeriod.forEach(run=>{
+      const x0=x.getPixelForValue(run.s)-2, x1=x.getPixelForValue(run.e)+2;
+      ctx.fillRect(x0,top,Math.max(x1-x0,3),bottom-top);
+    });
+    ctx.restore();
+
+    const zones=METRICS[currentMetric].zones;
+    if(zones){
+      ctx.save();
+      zones.forEach(z=>{
+        const py=y.getPixelForValue(z.v);
+        if(py<top||py>bottom) return;
+        ctx.strokeStyle='rgba(43,52,64,0.35)'; ctx.setLineDash([5,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(left,py); ctx.lineTo(right,py); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='rgba(43,52,64,0.55)';
+        ctx.font='10px IBM Plex Sans KR'; ctx.textAlign='right';
+        ctx.fillText(z.t+' '+z.v, right-4, py-4);
+      });
+      ctx.restore();
+    }
+
+    ctx.save(); ctx.strokeStyle='rgba(141,90,151,0.55)'; ctx.lineWidth=1.5;
+    viewInj.forEach(i=>{
+      const px=x.getPixelForValue(i);
+      ctx.beginPath(); ctx.moveTo(px,top); ctx.lineTo(px,bottom); ctx.stroke();
+    });
+    ctx.restore();
+  }
+};
+
+/* --- 기간 슬라이스 + 7일 이동평균 --- */
+function sliceByRange(){
+  if(currentRange==='all') return {rows:DATA,offset:0};
+  const days=currentRange==='1m'?30:90;
+  const lastDate=DATA[DATA.length-1].date;
+  const cut=new Date(parse(lastDate).getTime()-days*86400000);
+  let i=DATA.findIndex(r=>parse(r.date)>=cut);
+  if(i<0) i=0;
+  return {rows:DATA.slice(i),offset:i};
+}
+
+function movingAvg(vals,win){
+  return vals.map((_,i)=>{
+    const s=[];
+    for(let j=Math.max(0,i-win+1);j<=i;j++) if(vals[j]!=null) s.push(vals[j]);
+    return s.length? +(s.reduce((a,b)=>a+b,0)/s.length).toFixed(2) : null;
+  });
+}
+
+function renderRangeDelta(rows){
+  const f=rows[0], l=rows[rows.length-1];
+  const items=[
+    {k:'체중', v:l.weight-f.weight, u:'kg'},
+    {k:'체지방률', v:fatPct(l)-fatPct(f), u:'%p'},
+    {k:'체지방량', v:l.fat-f.fat, u:'kg'},
+    {k:'골격근량', v:l.muscle-f.muscle, u:'kg'}
+  ];
+  document.getElementById('rangeDelta').innerHTML=items.map(it=>{
+    const cls=Math.abs(it.v)<0.05?'flat':(it.v<0?'dn':'up');
+    return `<div><div class="rk">${it.k}</div><div class="rv ${cls}">${sign(it.v)}</div></div>`;
+  }).join('');
+}
+
+function draw(key){
+  currentMetric=key;
+  const m=METRICS[key];
+  const {rows,offset}=sliceByRange();
+
+  renderRangeDelta(rows);
+
+  // 전체 시리즈로 MA를 구한 뒤 창에 맞게 잘라야 왼쪽 끝도 정확함
+  const fullVals=m.data;
+  const ma=movingAvg(fullVals,7).slice(offset);
+  const vals=fullVals.slice(offset);
+
+  // 마커 인덱스를 창 기준으로 재계산
+  viewInj=injIdx.map(i=>i-offset).filter(i=>i>=0);
+  viewPeriod=periodRuns.map(r=>({s:r.s-offset,e:r.e-offset}))
+                       .filter(r=>r.e>=0)
+                       .map(r=>({s:Math.max(r.s,0),e:r.e}));
+
+  if(chart) chart.destroy();
+  chart=new Chart(document.getElementById('chart'),{
+    type:'line',
+    data:{labels:rows.map(r=>md(r.date)),datasets:[
+      {label:m.label,data:vals,borderColor:m.color,borderWidth:2,
+       pointRadius:0,pointHitRadius:12,tension:0.25,spanGaps:true},
+      {label:'7일 평균',data:ma,borderColor:'rgba(107,117,131,0.75)',borderWidth:1.5,
+       borderDash:[5,4],pointRadius:0,pointHitRadius:0,tension:0.3,spanGaps:true}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{
+        backgroundColor:'#2B3440',
+        titleFont:{family:'IBM Plex Mono'},bodyFont:{family:'IBM Plex Mono'}
+      }},
+      scales:{
+        x:{ticks:{maxTicksLimit:6,font:{family:'IBM Plex Mono',size:10},color:'#6B7583'},grid:{display:false}},
+        y:{ticks:{font:{family:'IBM Plex Mono',size:10},color:'#6B7583'},grid:{color:'#EAE7DE'}}
+      }
+    },
+    plugins:[markerPlugin]
+  });
+}
+
+
+/* ================= 시작 ================= */
+load().then(render);
+</script>
+</body>
+</html>
